@@ -345,13 +345,23 @@ export class VoxelEngine {
     if (this.pointerLocked) e.preventDefault();
   };
 
+  private pointerLockCooldown = 0;
   private onCanvasClick = () => {
-    if (!this.pointerLocked && !this.inventoryOpen && !this.paused) {
-      this.renderer.domElement.requestPointerLock();
+    if (!this.pointerLocked && !this.inventoryOpen && !this.paused && this.pointerLockCooldown <= 0) {
+      // use setTimeout to avoid "Pointer lock cannot be acquired immediately after exit" error
+      setTimeout(() => {
+        if (!this.inventoryOpen && !this.paused) {
+          this.renderer.domElement.requestPointerLock();
+        }
+      }, 100);
     }
   };
   private onPointerLockChange = () => {
     this.pointerLocked = document.pointerLockElement === this.renderer.domElement;
+    if (!this.pointerLocked) {
+      // set cooldown so we don't try to re-lock too quickly
+      this.pointerLockCooldown = 0.5;
+    }
     this.markDirty();
   };
   private onMouseMove = (e: MouseEvent) => {
@@ -1140,6 +1150,7 @@ export class VoxelEngine {
   private update(dt: number) {
     // cooldowns
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    if (this.pointerLockCooldown > 0) this.pointerLockCooldown -= dt;
 
     // world time
     if (!this.inventoryOpen) this.time += dt;

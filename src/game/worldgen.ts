@@ -162,6 +162,56 @@ export class WorldGen {
       }
     }
 
+    // 1.5 Water flood-fill pass: ensure all air blocks below sea level that are
+    // adjacent to water get filled. This prevents gaps in rivers and oceans.
+    // We check the chunk's own columns plus a 1-block border from neighbors.
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const wx = ox + lx, wz = oz + lz;
+        const col = this.column(wx, wz);
+        // if this column is at or below sea level, or adjacent to a water column
+        if (col.height <= SEA_LEVEL + 1) {
+          for (let y = 1; y <= SEA_LEVEL; y++) {
+            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
+              // check if any neighbor (in this chunk) is water at this level
+              let hasWaterNeighbor = false;
+              if (lx > 0 && chunk.blocks[idx(lx - 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
+              if (lx < CHUNK_SIZE - 1 && chunk.blocks[idx(lx + 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
+              if (lz > 0 && chunk.blocks[idx(lx, y, lz - 1)] === B.WATER) hasWaterNeighbor = true;
+              if (lz < CHUNK_SIZE - 1 && chunk.blocks[idx(lx, y, lz + 1)] === B.WATER) hasWaterNeighbor = true;
+              // also fill if we're below sea level and the column height is low (ocean floor)
+              if (col.height <= SEA_LEVEL) hasWaterNeighbor = true;
+              if (hasWaterNeighbor) {
+                chunk.blocks[idx(lx, y, lz)] = B.WATER;
+              }
+            }
+          }
+        }
+      }
+    }
+    // Second pass: now that we've added water, check again for newly-connected air
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const wx = ox + lx, wz = oz + lz;
+        const col = this.column(wx, wz);
+        if (col.height <= SEA_LEVEL + 1) {
+          for (let y = 1; y <= SEA_LEVEL; y++) {
+            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
+              let hasWaterNeighbor = false;
+              if (lx > 0 && chunk.blocks[idx(lx - 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
+              if (lx < CHUNK_SIZE - 1 && chunk.blocks[idx(lx + 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
+              if (lz > 0 && chunk.blocks[idx(lx, y, lz - 1)] === B.WATER) hasWaterNeighbor = true;
+              if (lz < CHUNK_SIZE - 1 && chunk.blocks[idx(lx, y, lz + 1)] === B.WATER) hasWaterNeighbor = true;
+              if (col.height <= SEA_LEVEL) hasWaterNeighbor = true;
+              if (hasWaterNeighbor) {
+                chunk.blocks[idx(lx, y, lz)] = B.WATER;
+              }
+            }
+          }
+        }
+      }
+    }
+
     // 2. Features (trees, cacti, flowers, tallgrass) scanning expanded region
     const M = 3; // tree radius margin
     for (let ex = -M; ex < CHUNK_SIZE + M; ex++) {
