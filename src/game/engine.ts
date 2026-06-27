@@ -1166,7 +1166,7 @@ export class VoxelEngine {
 
     // chunk streaming
     this.world.update(this.player.pos.x, this.player.pos.z, this.renderDistance);
-    this.world.updateMeshes(3);
+    this.world.updateMeshes(8);
 
     // player
     if (!this.inventoryOpen) {

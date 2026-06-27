@@ -291,10 +291,16 @@ export class WorldGen {
     // windows (glass)
     this.setBlockForce(chunk, x + 1, y + 2, z, B.GLASS);
     this.setBlockForce(chunk, x + 3, y + 2, z, B.GLASS);
-    // roof
+    // roof — Minecraft-style: oak planks with a peaked roof
     for (let dx = -1; dx <= w; dx++) {
       for (let dz = -1; dz <= d; dz++) {
-        this.setBlockForce(chunk, x + dx, y + h + 1, z + dz, B.WOOL_RED);
+        this.setBlockForce(chunk, x + dx, y + h + 1, z + dz, B.OAK_PLANKS);
+      }
+    }
+    // peaked roof (second layer, smaller)
+    for (let dx = 0; dx < w; dx++) {
+      for (let dz = 0; dz < d; dz++) {
+        this.setBlockForce(chunk, x + dx, y + h + 2, z + dz, B.OAK_PLANKS);
       }
     }
     // torch inside
@@ -304,18 +310,38 @@ export class WorldGen {
 
   oreAt(x: number, y: number, z: number, h: number): number {
     const n = this.noise;
-    if (y < h - 3 && n.perlin3(x * 0.1, y * 0.1, z * 0.1) > 0.5) return B.COAL_ORE;
-    if (y < h - 8 && n.perlin3(x * 0.12 + 50, y * 0.12, z * 0.12 + 50) > 0.55) return B.IRON_ORE;
-    if (y < 22 && n.perlin3(x * 0.15 + 100, y * 0.15, z * 0.15 + 100) > 0.6) return B.GOLD_ORE;
+    const depth = h - y; // depth below surface
+    // Coal: common at all depths (Minecraft: y=0-128)
+    if (depth > 3 && n.perlin3(x * 0.1, y * 0.1, z * 0.1) > 0.5) return B.COAL_ORE;
+    // Copper: common near surface (Minecraft: y=0-96)
+    if (depth > 5 && y < 50 && n.perlin3(x * 0.13 + 350, y * 0.13, z * 0.13 + 350) > 0.55) return B.COPPER_ORE;
+    // Iron: common below surface (Minecraft: y=0-64)
+    if (depth > 8 && y < 60 && n.perlin3(x * 0.12 + 50, y * 0.12, z * 0.12 + 50) > 0.55) return B.IRON_ORE;
+    // Redstone: rare, deep only (Minecraft: y=0-16)
+    if (y < 20 && n.perlin3(x * 0.15 + 100, y * 0.15, z * 0.15 + 100) > 0.6) return B.REDSTONE_ORE;
+    // Gold: rare, deep (Minecraft: y=0-32)
+    if (y < 30 && n.perlin3(x * 0.15 + 150, y * 0.15, z * 0.15 + 150) > 0.62) return B.GOLD_ORE;
+    // Gem (diamond): very rare, deepest (Minecraft: y=0-16)
     if (y < 16 && n.perlin3(x * 0.2 + 200, y * 0.2, z * 0.2 + 200) > 0.66) return B.GEM_ORE;
     return B.AIR;
   }
 
   isCave(x: number, y: number, z: number): boolean {
-    const n1 = this.noise.perlin3(x * 0.045, y * 0.06, z * 0.045);
-    const n2 = this.noise.perlin3(x * 0.045 + 100, y * 0.06 + 50, z * 0.045 + 100);
-    // worm-tunnel style: intersect two ridges
-    return n1 > 0.55 && n2 > 0.5;
+    const n = this.noise;
+    // Layer 1: tunnel caves (worm-tunnel style) — more common
+    const n1 = n.perlin3(x * 0.04, y * 0.06, z * 0.04);
+    const n2 = n.perlin3(x * 0.04 + 100, y * 0.06 + 50, z * 0.04 + 100);
+    if (n1 > 0.45 && n2 > 0.40) return true;
+    // Layer 2: large caverns (deeper only, below y=30)
+    if (y < 30) {
+      const n3 = n.perlin3(x * 0.025 + 200, y * 0.04, z * 0.025 + 200);
+      if (n3 > 0.55) return true;
+    }
+    // Layer 3: ravines (long narrow cracks) — rare
+    const n4 = n.perlin3(x * 0.02 + 300, y * 0.08, z * 0.02 + 300);
+    const n5 = n.perlin3(x * 0.02 + 400, y * 0.08, z * 0.02 + 400);
+    if (n4 > 0.6 && Math.abs(n5) < 0.15) return true;
+    return false;
   }
 
   private setBlockClipped(chunk: ChunkData, wx: number, y: number, wz: number, b: number) {

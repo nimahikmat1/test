@@ -104,12 +104,6 @@ export class World {
     if (lx === CHUNK_SIZE - 1) this.markDirty(cx + 1, cz);
     if (lz === 0) this.markDirty(cx, cz - 1);
     if (lz === CHUNK_SIZE - 1) this.markDirty(cx, cz + 1);
-    // immediate remesh for instant visual feedback (no see-through lag)
-    this.remeshChunk(cx, cz);
-    if (lx === 0) this.remeshChunk(cx - 1, cz);
-    if (lx === CHUNK_SIZE - 1) this.remeshChunk(cx + 1, cz);
-    if (lz === 0) this.remeshChunk(cx, cz - 1);
-    if (lz === CHUNK_SIZE - 1) this.remeshChunk(cx, cz + 1);
     return true;
   }
 
