@@ -5,7 +5,7 @@ import { Player } from './player';
 import { ItemId, MobState } from './types';
 import { I } from './blocks';
 
-export type MobKind = 'grazer' | 'critter' | 'stalker' | 'shooter';
+export type MobKind = 'grazer' | 'critter' | 'stalker' | 'shooter' | 'villager';
 
 interface MobDef {
   kind: MobKind;
@@ -53,6 +53,13 @@ export const MOB_DEFS: Record<MobKind, MobDef> = {
     color: 0x9a9a9a, headColor: 0xc0c0c0,
     drops: [{ item: I.STICK, min: 0, max: 2 }],
     spawnBiomes: ['plains', 'forest', 'mountains', 'tundra'], maxPerArea: 4,
+  },
+  villager: {
+    kind: 'villager', name: 'Villager', hostile: false, health: 20, speed: 1.5,
+    width: 0.6, height: 1.9, attack: 0, detectRange: 0, attackRange: 0,
+    color: 0x8a6a3a, headColor: 0xe8b890,
+    drops: [{ item: I.IRON_INGOT, min: 0, max: 1 }],
+    spawnBiomes: ['plains', 'forest'], maxPerArea: 8,
   },
 };
 

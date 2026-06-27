@@ -134,8 +134,8 @@ export class WorldGen {
           }
         }
 
-        // water fill — fill ALL air blocks below sea level for ocean/lake columns
-        // This prevents gaps in rivers and oceans where caves carved out terrain
+        // water fill — fill ALL air blocks below sea level
+        // This prevents gaps in rivers and oceans
         if (h <= SEA_LEVEL) {
           // fill from surface up to sea level (surface water)
           for (let y = h + 1; y <= SEA_LEVEL; y++) {
@@ -143,18 +143,13 @@ export class WorldGen {
               chunk.blocks[idx(lx, y, lz)] = B.WATER;
             }
           }
-          // fill any air below sea level (caves that broke through to water)
-          for (let y = 7; y <= SEA_LEVEL; y++) {
-            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
-              chunk.blocks[idx(lx, y, lz)] = B.WATER;
-            }
-          }
-        } else if (h <= SEA_LEVEL + 2) {
-          // near-shore columns: fill caves that are below sea level
-          // (prevents gaps at shorelines where terrain meets water)
-          for (let y = 7; y <= SEA_LEVEL; y++) {
-            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
-              // only fill if there's water adjacent (simple check: column is near ocean)
+        }
+        // fill any air below sea level (caves near water)
+        for (let y = 7; y <= SEA_LEVEL; y++) {
+          if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
+            // check if column is near water (height <= sea level + 3)
+            const col2 = this.column(wx, wz);
+            if (col2.height <= SEA_LEVEL + 3) {
               chunk.blocks[idx(lx, y, lz)] = B.WATER;
             }
           }
@@ -162,39 +157,10 @@ export class WorldGen {
       }
     }
 
-    // 1.5 Water flood-fill pass: ensure all air blocks below sea level that are
-    // adjacent to water get filled. This prevents gaps in rivers and oceans.
-    // We check the chunk's own columns plus a 1-block border from neighbors.
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-        const wx = ox + lx, wz = oz + lz;
-        const col = this.column(wx, wz);
-        // if this column is at or below sea level, or adjacent to a water column
-        if (col.height <= SEA_LEVEL + 1) {
-          for (let y = 1; y <= SEA_LEVEL; y++) {
-            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
-              // check if any neighbor (in this chunk) is water at this level
-              let hasWaterNeighbor = false;
-              if (lx > 0 && chunk.blocks[idx(lx - 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
-              if (lx < CHUNK_SIZE - 1 && chunk.blocks[idx(lx + 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
-              if (lz > 0 && chunk.blocks[idx(lx, y, lz - 1)] === B.WATER) hasWaterNeighbor = true;
-              if (lz < CHUNK_SIZE - 1 && chunk.blocks[idx(lx, y, lz + 1)] === B.WATER) hasWaterNeighbor = true;
-              // also fill if we're below sea level and the column height is low (ocean floor)
-              if (col.height <= SEA_LEVEL) hasWaterNeighbor = true;
-              if (hasWaterNeighbor) {
-                chunk.blocks[idx(lx, y, lz)] = B.WATER;
-              }
-            }
-          }
-        }
-      }
-    }
-    // Second pass: now that we've added water, check again for newly-connected air
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-        const wx = ox + lx, wz = oz + lz;
-        const col = this.column(wx, wz);
-        if (col.height <= SEA_LEVEL + 1) {
+    // 1.5 Water flood-fill: fill any remaining air below sea level that touches water
+    for (let pass = 0; pass < 3; pass++) {
+      for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
           for (let y = 1; y <= SEA_LEVEL; y++) {
             if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
               let hasWaterNeighbor = false;
@@ -202,7 +168,8 @@ export class WorldGen {
               if (lx < CHUNK_SIZE - 1 && chunk.blocks[idx(lx + 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
               if (lz > 0 && chunk.blocks[idx(lx, y, lz - 1)] === B.WATER) hasWaterNeighbor = true;
               if (lz < CHUNK_SIZE - 1 && chunk.blocks[idx(lx, y, lz + 1)] === B.WATER) hasWaterNeighbor = true;
-              if (col.height <= SEA_LEVEL) hasWaterNeighbor = true;
+              if (y > 1 && chunk.blocks[idx(lx, y - 1, lz)] === B.WATER) hasWaterNeighbor = true;
+              if (y < SEA_LEVEL && chunk.blocks[idx(lx, y + 1, lz)] === B.WATER) hasWaterNeighbor = true;
               if (hasWaterNeighbor) {
                 chunk.blocks[idx(lx, y, lz)] = B.WATER;
               }
@@ -247,9 +214,92 @@ export class WorldGen {
       }
     }
 
+    // 3. Village generation (rare, on plains/forest only)
+    const villageR = n.hash2(chunk.cx * 7 + 999, chunk.cz * 7 + 888);
+    if (villageR < 0.03) {
+      // check if center is suitable (not ocean, not mountain)
+      const cx2 = ox + 8, cz2 = oz + 8;
+      const centerCol = this.column(cx2, cz2);
+      if (centerCol.biome === Biome.PLAINS || centerCol.biome === Biome.FOREST) {
+        this.generateVillage(chunk, cx2, centerCol.height, cz2);
+      }
+    }
+
     chunk.computeHeightMap();
     chunk.generated = true;
     chunk.dirty = true;
+  }
+
+  private generateVillage(chunk: ChunkData, cx: number, cy: number, cz: number) {
+    // Generate a small village: 3-5 houses with paths
+    const n = this.noise;
+    const numHouses = 3 + Math.floor(n.hash2(cx, cz) * 3);
+    for (let i = 0; i < numHouses; i++) {
+      const ang = (i / numHouses) * Math.PI * 2;
+      const dist = 6 + n.hash2(cx + i, cz + i) * 6;
+      const hx = Math.floor(cx + Math.cos(ang) * dist);
+      const hz = Math.floor(cz + Math.sin(ang) * dist);
+      const hy = this.column(hx, hz).height;
+      if (hy > 35 && hy < 80) {
+        this.placeHouse(chunk, hx, hy, hz, Math.floor(n.hash2(hx, hz) * 4));
+      }
+    }
+    // place a few crops (sugar cane) around
+    for (let i = 0; i < 8; i++) {
+      const fx = cx + Math.floor((n.hash2(cx + i, cz) - 0.5) * 12);
+      const fz = cz + Math.floor((n.hash2(cx, cz + i) - 0.5) * 12);
+      const fy = this.column(fx, fz).height;
+      if (fy > 35) {
+        this.setBlockForce(chunk, fx, fy + 1, fz, B.SUGAR_CANE);
+      }
+    }
+  }
+
+  private placeHouse(chunk: ChunkData, x: number, y: number, z: number, rotation: number) {
+    // Simple 5x5 house with walls, roof, door
+    const w = 5, d = 5, h = 3;
+    const logBlock = B.OAK_LOG;
+    const planks = B.OAK_PLANKS;
+    const door = B.OAK_DOOR;
+    // foundation
+    for (let dx = 0; dx < w; dx++) {
+      for (let dz = 0; dz < d; dz++) {
+        this.setBlockForce(chunk, x + dx, y, z + dz, planks);
+      }
+    }
+    // walls
+    for (let dy = 1; dy <= h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
+        this.setBlockForce(chunk, x + dx, y + dy, z, planks);
+        this.setBlockForce(chunk, x + dx, y + dy, z + d - 1, planks);
+      }
+      for (let dz = 0; dz < d; dz++) {
+        this.setBlockForce(chunk, x, y + dy, z + dz, planks);
+        this.setBlockForce(chunk, x + w - 1, y + dy, z + dz, planks);
+      }
+    }
+    // corners with logs
+    for (let dy = 1; dy <= h; dy++) {
+      this.setBlockForce(chunk, x, y + dy, z, logBlock);
+      this.setBlockForce(chunk, x + w - 1, y + dy, z, logBlock);
+      this.setBlockForce(chunk, x, y + dy, z + d - 1, logBlock);
+      this.setBlockForce(chunk, x + w - 1, y + dy, z + d - 1, logBlock);
+    }
+    // door (front center)
+    this.setBlockForce(chunk, x + 2, y + 1, z, door);
+    this.setBlockForce(chunk, x + 2, y + 2, z, B.AIR);
+    // windows (glass)
+    this.setBlockForce(chunk, x + 1, y + 2, z, B.GLASS);
+    this.setBlockForce(chunk, x + 3, y + 2, z, B.GLASS);
+    // roof
+    for (let dx = -1; dx <= w; dx++) {
+      for (let dz = -1; dz <= d; dz++) {
+        this.setBlockForce(chunk, x + dx, y + h + 1, z + dz, B.WOOL_RED);
+      }
+    }
+    // torch inside
+    this.setBlockForce(chunk, x + 2, y + 2, z + 2, B.TORCH);
+    void rotation;
   }
 
   oreAt(x: number, y: number, z: number, h: number): number {

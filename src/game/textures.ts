@@ -644,5 +644,84 @@ export class TextureAtlas {
       px(c, s, 3, 5, 10, 6, '#c43a3a');
       px(c, s, 4, 6, 8, 4, '#e0456a');
     });
+    // ---- Armor ----
+    const armorTex = (name: string, base: string, trim: string, seed: number) =>
+      this.reg(name, (c, s) => {
+        noisy(c, s, base, seed, 0.1, 0.4);
+        px(c, s, 3, 3, 10, 1, trim);
+        px(c, s, 3, s - 4, 10, 1, trim);
+        px(c, s, 3, 3, 1, s - 6, trim);
+        px(c, s, s - 4, 3, 1, s - 6, trim);
+      });
+    armorTex('leather_helmet', '#8a5a3a', '#6b4222', 1100);
+    armorTex('leather_chestplate', '#8a5a3a', '#6b4222', 1101);
+    armorTex('leather_leggings', '#8a5a3a', '#6b4222', 1102);
+    armorTex('leather_boots', '#8a5a3a', '#6b4222', 1103);
+    armorTex('iron_helmet', '#d8d8d8', '#a8a8a8', 1104);
+    armorTex('iron_chestplate', '#d8d8d8', '#a8a8a8', 1105);
+    armorTex('iron_leggings', '#d8d8d8', '#a8a8a8', 1106);
+    armorTex('iron_boots', '#d8d8d8', '#a8a8a8', 1107);
+    armorTex('gold_helmet', '#f4d644', '#c4a420', 1108);
+    armorTex('gold_chestplate', '#f4d644', '#c4a420', 1109);
+    armorTex('gold_leggings', '#f4d644', '#c4a420', 1110);
+    armorTex('gold_boots', '#f4d644', '#c4a420', 1111);
+    armorTex('gem_helmet', '#5fe3c0', '#3fb898', 1112);
+    armorTex('gem_chestplate', '#5fe3c0', '#3fb898', 1113);
+    armorTex('gem_leggings', '#5fe3c0', '#3fb898', 1114);
+    armorTex('gem_boots', '#5fe3c0', '#3fb898', 1115);
+    // More food
+    this.reg('cookie', (c, s) => {
+      noisy(c, s, '#c98a3a', 1120, 0.1, 0.4);
+      px(c, s, 3, 6, 10, 4, '#c98a3a');
+      px(c, s, 5, 7, 1, 1, '#3a2a1a');
+      px(c, s, 8, 8, 1, 1, '#3a2a1a');
+      px(c, s, 10, 7, 1, 1, '#3a2a1a');
+    });
+    this.reg('melon_slice', (c, s) => {
+      noisy(c, s, '#e84a4a', 1121, 0.08, 0.3);
+      px(c, s, 2, 3, 12, 2, '#5a9a3a');
+      px(c, s, 3, 5, 10, 8, '#e84a4a');
+      px(c, s, 3, 5, 10, 1, '#f86a6a');
+    });
+    this.reg('carrot', (c, s) => {
+      px(c, s, 7, 8, 2, 7, '#e88a3a');
+      px(c, s, 6, 5, 4, 3, '#5a9a3a');
+      px(c, s, 7, 4, 2, 2, '#5a9a3a');
+    });
+    this.reg('potato', (c, s) => { noisy(c, s, '#c4a46a', 1122, 0.1, 0.4); });
+    this.reg('baked_potato', (c, s) => { noisy(c, s, '#8a6a3a', 1123, 0.1, 0.4); });
+    // Materials
+    this.reg('bone', (c, s) => {
+      noisy(c, s, '#e8e8d8', 1124, 0.06, 0.3);
+      px(c, s, 4, 4, 8, 2, '#d8d8c8');
+      px(c, s, 5, 10, 6, 2, '#d8d8c8');
+    });
+    this.reg('gunpowder', (c, s) => { noisy(c, s, '#3a3a3a', 1125, 0.15, 0.5); });
+    this.reg('sugar', (c, s) => { noisy(c, s, '#f4f4f4', 1126, 0.06, 0.3); });
+    this.reg('paper', (c, s) => {
+      noisy(c, s, '#f0e8d0', 1127, 0.04, 0.2);
+      px(c, s, 3, 3, 10, 10, '#f0e8d0');
+      px(c, s, 3, 3, 10, 1, '#d0c8b0');
+    });
+    this.reg('book', (c, s) => {
+      noisy(c, s, '#b3312c', 1128, 0.08, 0.3);
+      px(c, s, 3, 3, 10, 10, '#b3312c');
+      px(c, s, 3, 3, 2, 10, '#e8d8a0');
+      px(c, s, 5, 5, 6, 1, '#e8d8a0');
+      px(c, s, 5, 9, 6, 1, '#e8d8a0');
+    });
+    this.reg('iron_nugget', (c, s) => { noisy(c, s, '#d8d8d8', 1129, 0.08, 0.3); px(c, s, 6, 6, 4, 4, '#b8b8b8'); });
+    this.reg('gold_nugget', (c, s) => { noisy(c, s, '#f4d644', 1130, 0.08, 0.3); px(c, s, 6, 6, 4, 4, '#e0bf2a'); });
+    // Spawn eggs
+    this.reg('spawn_grazer', (c, s) => {
+      noisy(c, s, '#9c6b3c', 1131, 0.1, 0.4);
+      px(c, s, 5, 3, 6, 5, '#b08850');
+      px(c, s, 6, 4, 4, 3, '#3a2a1a');
+    });
+    this.reg('spawn_stalker', (c, s) => {
+      noisy(c, s, '#3a5a3a', 1132, 0.1, 0.4);
+      px(c, s, 5, 3, 6, 5, '#4a6a4a');
+      px(c, s, 6, 4, 4, 3, '#1a2a1a');
+    });
   }
 }

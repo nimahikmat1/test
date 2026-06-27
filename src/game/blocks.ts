@@ -143,6 +143,40 @@ export const I = {
   COMPASS_ITEM: 1041,
   MAP: 1042,
   BED: 1043,
+  // Armor
+  LEATHER_HELMET: 1044,
+  LEATHER_CHESTPLATE: 1045,
+  LEATHER_LEGGINGS: 1046,
+  LEATHER_BOOTS: 1047,
+  IRON_HELMET: 1048,
+  IRON_CHESTPLATE: 1049,
+  IRON_LEGGINGS: 1050,
+  IRON_BOOTS: 1051,
+  GOLD_HELMET: 1052,
+  GOLD_CHESTPLATE: 1053,
+  GOLD_LEGGINGS: 1054,
+  GOLD_BOOTS: 1055,
+  GEM_HELMET: 1056,
+  GEM_CHESTPLATE: 1057,
+  GEM_LEGGINGS: 1058,
+  GEM_BOOTS: 1059,
+  // More food
+  COOKIE: 1060,
+  MELON_SLICE: 1061,
+  CARROT: 1062,
+  POTATO: 1063,
+  BAKED_POTATO: 1064,
+  // More materials
+  BONE: 1065,
+  GUNPOWDER: 1066,
+  SUGAR: 1067,
+  PAPER: 1068,
+  BOOK: 1069,
+  IRON_NUGGET: 1070,
+  GOLD_NUGGET: 1071,
+  // Spawn eggs
+  SPAWN_GRAZER: 1072,
+  SPAWN_STALKER: 1073,
 } as const;
 
 export class Registry {
@@ -350,6 +384,38 @@ export class Registry {
     this.item(I.COMPASS_ITEM, 'compass_item', 'Compass', { iconTile: A.get('compass') });
     this.item(I.MAP, 'map', 'Map', { iconTile: A.get('map') });
     this.item(I.BED, 'bed', 'Bed', { category: 'tool', maxStack: 1, iconTile: A.get('bed') });
+    // Armor
+    const armorTiers: [string, number, number, string][] = [
+      ['leather', 1044, 0xe8b890, '#8a5a3a'],
+      ['iron', 1048, 0xd8d8d8, '#d8d8d8'],
+      ['gold', 1052, 0xf4d644, '#f4d644'],
+      ['gem', 1056, 0x5fe3c0, '#5fe3c0'],
+    ];
+    for (const [mat, baseId, _color, texPrefix] of armorTiers) {
+      const cap = mat.charAt(0).toUpperCase() + mat.slice(1);
+      this.item(baseId, `${mat}_helmet`, `${cap} Helmet`, { category: 'armor', maxStack: 1, iconTile: A.get(`${mat}_helmet`) });
+      this.item(baseId + 1, `${mat}_chestplate`, `${cap} Chestplate`, { category: 'armor', maxStack: 1, iconTile: A.get(`${mat}_chestplate`) });
+      this.item(baseId + 2, `${mat}_leggings`, `${cap} Leggings`, { category: 'armor', maxStack: 1, iconTile: A.get(`${mat}_leggings`) });
+      this.item(baseId + 3, `${mat}_boots`, `${cap} Boots`, { category: 'armor', maxStack: 1, iconTile: A.get(`${mat}_boots`) });
+      void _color; void texPrefix;
+    }
+    // More food
+    this.item(I.COOKIE, 'cookie', 'Cookie', { category: 'food', food: 1, iconTile: A.get('cookie') });
+    this.item(I.MELON_SLICE, 'melon_slice', 'Melon Slice', { category: 'food', food: 2, iconTile: A.get('melon_slice') });
+    this.item(I.CARROT, 'carrot', 'Carrot', { category: 'food', food: 3, iconTile: A.get('carrot') });
+    this.item(I.POTATO, 'potato', 'Potato', { category: 'food', food: 1, iconTile: A.get('potato') });
+    this.item(I.BAKED_POTATO, 'baked_potato', 'Baked Potato', { category: 'food', food: 5, iconTile: A.get('baked_potato') });
+    // More materials
+    this.item(I.BONE, 'bone', 'Bone', { iconTile: A.get('bone') });
+    this.item(I.GUNPOWDER, 'gunpowder', 'Gunpowder', { iconTile: A.get('gunpowder') });
+    this.item(I.SUGAR, 'sugar', 'Sugar', { iconTile: A.get('sugar') });
+    this.item(I.PAPER, 'paper', 'Paper', { iconTile: A.get('paper') });
+    this.item(I.BOOK, 'book', 'Book', { iconTile: A.get('book') });
+    this.item(I.IRON_NUGGET, 'iron_nugget', 'Iron Nugget', { iconTile: A.get('iron_nugget') });
+    this.item(I.GOLD_NUGGET, 'gold_nugget', 'Gold Nugget', { iconTile: A.get('gold_nugget') });
+    // Spawn eggs
+    this.item(I.SPAWN_GRAZER, 'spawn_grazer', 'Grazer Spawn Egg', { category: 'tool', maxStack: 64, iconTile: A.get('spawn_grazer') });
+    this.item(I.SPAWN_STALKER, 'spawn_stalker', 'Stalker Spawn Egg', { category: 'tool', maxStack: 64, iconTile: A.get('spawn_stalker') });
   }
 
   getBlock(id: BlockId): BlockType {

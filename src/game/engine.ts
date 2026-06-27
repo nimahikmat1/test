@@ -177,38 +177,23 @@ export class VoxelEngine {
     this.viewModelScene.add(vmDir);
     this.handGroup = new THREE.Group();
     this.viewModelScene.add(this.handGroup);
-    // arm (hand) — Minecraft-style arm with per-face shading (no texture, just colored faces)
+    // arm (hand) — Minecraft-style skin-colored arm, NO sleeve to avoid texture glitch
     // Arm dimensions: 4x12x4 pixels = 0.25 x 0.75 x 0.25 blocks
     const armGroup = new THREE.Group();
-    // Build arm as a box with per-face materials for proper Minecraft-style shading
-    // Face order: +x, -x, +y(top), -y(bottom), +z, -z
+    // Single arm with per-face shading (skin tone)
     const skinColor = 0xe8b890;
     const armMats = [
-      new THREE.MeshLambertMaterial({ color: skinColor }), // +x (right side) - medium
-      new THREE.MeshLambertMaterial({ color: skinColor }), // -x (left side) - medium
-      new THREE.MeshLambertMaterial({ color: 0xf0c8a0 }),  // +y (top) - brightest
-      new THREE.MeshLambertMaterial({ color: 0xc89870 }),  // -y (bottom) - darkest
-      new THREE.MeshLambertMaterial({ color: 0xe0b088 }),  // +z (front) - medium-light
-      new THREE.MeshLambertMaterial({ color: 0xe0b088 }),  // -z (back) - medium-light
+      new THREE.MeshLambertMaterial({ color: skinColor }), // +x
+      new THREE.MeshLambertMaterial({ color: skinColor }), // -x
+      new THREE.MeshLambertMaterial({ color: 0xf0c8a0 }),  // +y (top) brightest
+      new THREE.MeshLambertMaterial({ color: 0xc89870 }),  // -y (bottom) darkest
+      new THREE.MeshLambertMaterial({ color: 0xe0b088 }),  // +z (front)
+      new THREE.MeshLambertMaterial({ color: 0xe0b088 }),  // -z (back)
     ];
-    const armGeo = new THREE.BoxGeometry(0.2, 0.6, 0.2);
+    const armGeo = new THREE.BoxGeometry(0.2, 0.55, 0.2);
     const armMesh = new THREE.Mesh(armGeo, armMats);
-    armMesh.position.set(0, -0.3, 0); // pivot at top (shoulder)
+    armMesh.position.set(0, -0.275, 0); // pivot at top (shoulder)
     armGroup.add(armMesh);
-    // sleeve (shirt color) — also with per-face shading
-    const sleeveColor = 0x4a7ac0;
-    const sleeveMats = [
-      new THREE.MeshLambertMaterial({ color: sleeveColor }),
-      new THREE.MeshLambertMaterial({ color: sleeveColor }),
-      new THREE.MeshLambertMaterial({ color: 0x5a8ad0 }),
-      new THREE.MeshLambertMaterial({ color: 0x3a6ab0 }),
-      new THREE.MeshLambertMaterial({ color: 0x527ac6 }),
-      new THREE.MeshLambertMaterial({ color: 0x527ac6 }),
-    ];
-    const sleeveGeo = new THREE.BoxGeometry(0.21, 0.24, 0.21);
-    const sleeve = new THREE.Mesh(sleeveGeo, sleeveMats);
-    sleeve.position.set(0, -0.12, 0);
-    armGroup.add(sleeve);
     // position arm at bottom-right, angled so it points forward and down
     armGroup.position.set(0.38, -0.42, -0.72);
     armGroup.rotation.x = Math.PI * 0.42; // arm hangs down-forward
@@ -871,11 +856,13 @@ export class VoxelEngine {
     const item = stack ? this.reg.getItem(stack.item) : null;
     this.swingT = this.swingDuration;
 
-    // right-click on functional blocks opens their UI (even with empty hand)
+    // right-click on functional blocks ALWAYS opens their UI (regardless of held item)
+    // This takes priority over placing blocks — just like Minecraft
     if (this.target) {
       const tb = this.world.getBlock(this.target.x, this.target.y, this.target.z);
       if (tb === B.CRAFTING_TABLE) { this.openCraftingTable(); return; }
       if (tb === B.FURNACE) { this.openFurnace(this.target.x, this.target.y, this.target.z); return; }
+      if (tb === B.CHEST) { this.openCraftingTable(); return; } // chest opens inventory for now
     }
 
     if (!stack || !item) return;
@@ -1035,9 +1022,14 @@ export class VoxelEngine {
             const k = choices[Math.floor(Math.random() * choices.length)];
             if (MOB_DEFS[k].spawnBiomes.includes(biomeToName(biome))) kind = k;
           } else if (light > 8) {
-            // passive
-            const choices: MobKind[] = ['grazer', 'critter'];
-            const k = choices[Math.floor(Math.random() * choices.length)];
+            // passive (including villagers in plains/forest)
+            const choices: MobKind[] = ['grazer', 'critter', 'villager'];
+            const weights = [0.5, 0.3, 0.2]; // 20% chance villager
+            const r = Math.random();
+            let k: MobKind = 'grazer';
+            if (r < weights[0]) k = 'grazer';
+            else if (r < weights[0] + weights[1]) k = 'critter';
+            else k = 'villager';
             if (MOB_DEFS[k].spawnBiomes.includes(biomeToName(biome))) kind = k;
           }
           if (kind) {
@@ -1108,24 +1100,41 @@ export class VoxelEngine {
     const sunY = Math.sin(ang);
     const sunX = Math.cos(ang);
     this.sun.position.set(sunX * 100, sunY * 100, 40);
-    // intensity
-    const day = Math.max(0, sunY);
-    this.sun.intensity = 0.15 + day * 1.0;
-    this.ambient.intensity = 0.2 + day * 0.5;
-    this.hemi.intensity = 0.12 + day * 0.4;
-    // colors
+    // smooth intensity using smoothstep
+    const dayAmount = Math.max(0, Math.min(1, (sunY + 0.1) / 0.3));
+    const smoothDay = dayAmount * dayAmount * (3 - 2 * dayAmount); // smoothstep
+    this.sun.intensity = 0.1 + smoothDay * 1.0;
+    this.ambient.intensity = 0.15 + smoothDay * 0.5;
+    this.hemi.intensity = 0.1 + smoothDay * 0.4;
+    // smooth sky color interpolation (no hard cutoffs)
     const dayCol = new THREE.Color(0x88bbff);
-    const nightCol = new THREE.Color(0x0b1130);
+    const nightCol = new THREE.Color(0x0a0a25);
     const duskCol = new THREE.Color(0xe8703a);
+    const dawnCol = new THREE.Color(0xff9a5a);
+    // determine which phase we're in based on sunY
     let sky: THREE.Color;
-    if (sunY > 0.2) sky = dayCol;
-    else if (sunY > -0.2) {
-      const k = (sunY + 0.2) / 0.4;
-      sky = nightCol.clone().lerp(duskCol, k).lerp(dayCol, k * 0.5);
-    } else sky = nightCol;
+    if (sunY > 0.3) {
+      // full day
+      sky = dayCol.clone();
+    } else if (sunY > -0.1) {
+      // dawn/dusk transition: blend night -> dusk -> day
+      const k = (sunY + 0.1) / 0.4; // 0 at sunY=-0.1, 1 at sunY=0.3
+      if (sunX > 0) {
+        // dawn (morning)
+        sky = nightCol.clone().lerp(dawnCol, Math.min(1, k * 2)).lerp(dayCol, Math.max(0, k * 2 - 1));
+      } else {
+        // dusk (evening)
+        sky = nightCol.clone().lerp(duskCol, Math.min(1, k * 2)).lerp(dayCol, Math.max(0, k * 2 - 1));
+      }
+    } else {
+      // full night
+      sky = nightCol.clone();
+    }
     (this.scene.background as THREE.Color).copy(sky);
     (this.scene.fog as THREE.Fog).color.copy(sky);
-    this.sun.color.setHex(sunY > 0 ? 0xfff2cc : 0x445599);
+    // sun color: warm at dawn/dusk, white at noon, cool at night
+    const sunWarmth = 1 - smoothDay;
+    this.sun.color.setRGB(1, 0.95 - sunWarmth * 0.2, 0.8 - sunWarmth * 0.3);
   }
 
   // ----------------- main loop -----------------
@@ -1524,8 +1533,12 @@ export class VoxelEngine {
       this.swingT = this.swingDuration;
     }
 
+    // Minecraft-style swing: quick downswing, then recovery
     const swingProgress = this.swingT > 0 ? 1 - (this.swingT / this.swingDuration) : 0;
-    const swingAngle = Math.sin(swingProgress * Math.PI) * 1.2;
+    // Use a curve that swings down then back up (like Minecraft)
+    const swingCurve = Math.sin(swingProgress * Math.PI);
+    const swingAngle = swingCurve * 1.4; // swing down
+    const swingRecovery = swingProgress < 0.5 ? 0 : (swingProgress - 0.5) * 0.3; // slight recovery
 
     const bob = this.player.bobAmt;
     const bobX = Math.cos(this.player.bobPhase) * 0.03 * bob;
@@ -1538,9 +1551,10 @@ export class VoxelEngine {
     const idleX = Math.sin(t * 1.3) * 0.008;
     const idleY = Math.sin(t * 1.7) * 0.006;
 
-    // handGroup holds both arm and item; apply swing to the whole group
+    // Apply swing to the whole hand group (arm + item swing together)
     this.handGroup.position.set(this.viewBobX + idleX, this.viewBobY + idleY, 0);
-    this.handGroup.rotation.x = -swingAngle * 0.5;
+    // swing rotates the whole group forward then back
+    this.handGroup.rotation.x = -swingAngle + swingRecovery;
     this.handGroup.rotation.z = Math.sin(t * 0.9) * 0.02;
   }
 
