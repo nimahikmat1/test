@@ -134,23 +134,35 @@ export class WorldGen {
           }
         }
 
-        // water fill — fill ALL air blocks below sea level
-        // This prevents gaps in rivers and oceans
+        // water fill — fill ALL air blocks below sea level for ocean columns
         if (h <= SEA_LEVEL) {
-          // fill from surface up to sea level (surface water)
           for (let y = h + 1; y <= SEA_LEVEL; y++) {
             if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
               chunk.blocks[idx(lx, y, lz)] = B.WATER;
             }
           }
-        }
-        // fill any air below sea level (caves near water)
-        for (let y = 7; y <= SEA_LEVEL; y++) {
-          if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
-            // check if column is near water (height <= sea level + 3)
-            const col2 = this.column(wx, wz);
-            if (col2.height <= SEA_LEVEL + 3) {
+          // also fill caves below sea level
+          for (let y = 7; y <= SEA_LEVEL; y++) {
+            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
               chunk.blocks[idx(lx, y, lz)] = B.WATER;
+            }
+          }
+        }
+        // for columns near sea level (shoreline), fill caves that connect to water
+        else if (h <= SEA_LEVEL + 4) {
+          for (let y = 7; y <= SEA_LEVEL; y++) {
+            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
+              // check if any neighbor column is ocean (below sea level)
+              let nearWater = false;
+              for (let ddx = -2; ddx <= 2 && !nearWater; ddx++) {
+                for (let ddz = -2; ddz <= 2 && !nearWater; ddz++) {
+                  const nc = this.column(wx + ddx, wz + ddz);
+                  if (nc.height <= SEA_LEVEL) nearWater = true;
+                }
+              }
+              if (nearWater) {
+                chunk.blocks[idx(lx, y, lz)] = B.WATER;
+              }
             }
           }
         }
@@ -158,18 +170,30 @@ export class WorldGen {
     }
 
     // 1.5 Water flood-fill: fill any remaining air below sea level that touches water
-    for (let pass = 0; pass < 3; pass++) {
+    // Also check neighboring chunks for cross-border water connectivity
+    for (let pass = 0; pass < 4; pass++) {
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
         for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+          const wx = ox + lx, wz = oz + lz;
           for (let y = 1; y <= SEA_LEVEL; y++) {
             if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
               let hasWaterNeighbor = false;
+              // check in-chunk neighbors
               if (lx > 0 && chunk.blocks[idx(lx - 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
               if (lx < CHUNK_SIZE - 1 && chunk.blocks[idx(lx + 1, y, lz)] === B.WATER) hasWaterNeighbor = true;
               if (lz > 0 && chunk.blocks[idx(lx, y, lz - 1)] === B.WATER) hasWaterNeighbor = true;
               if (lz < CHUNK_SIZE - 1 && chunk.blocks[idx(lx, y, lz + 1)] === B.WATER) hasWaterNeighbor = true;
               if (y > 1 && chunk.blocks[idx(lx, y - 1, lz)] === B.WATER) hasWaterNeighbor = true;
               if (y < SEA_LEVEL && chunk.blocks[idx(lx, y + 1, lz)] === B.WATER) hasWaterNeighbor = true;
+              // check cross-border neighbors using terrain height
+              if (!hasWaterNeighbor) {
+                if (lx === 0 && this.column(wx - 1, wz).height <= SEA_LEVEL) hasWaterNeighbor = true;
+                if (lx === CHUNK_SIZE - 1 && this.column(wx + 1, wz).height <= SEA_LEVEL) hasWaterNeighbor = true;
+                if (lz === 0 && this.column(wx, wz - 1).height <= SEA_LEVEL) hasWaterNeighbor = true;
+                if (lz === CHUNK_SIZE - 1 && this.column(wx, wz + 1).height <= SEA_LEVEL) hasWaterNeighbor = true;
+              }
+              // also fill if this column is ocean
+              if (this.column(wx, wz).height <= SEA_LEVEL) hasWaterNeighbor = true;
               if (hasWaterNeighbor) {
                 chunk.blocks[idx(lx, y, lz)] = B.WATER;
               }

@@ -208,7 +208,7 @@ export class VoxelEngine {
     this.spawnOnLand();
     // ensure initial chunks
     this.world.update(this.player.pos.x, this.player.pos.z, this.renderDistance);
-    for (let i = 0; i < 60; i++) this.world.updateMeshes(6);
+    for (let i = 0; i < 100; i++) this.world.updateMeshes(8);
 
     this.bindEvents();
     window.addEventListener('resize', this.onResize);
@@ -257,7 +257,7 @@ export class VoxelEngine {
     this.giveStarterItems();
     this.spawnOnLand();
     this.world.update(this.player.pos.x, this.player.pos.z, this.renderDistance);
-    for (let i = 0; i < 60; i++) this.world.updateMeshes(6);
+    for (let i = 0; i < 100; i++) this.world.updateMeshes(8);
     this.time = 0;
     this.markDirty();
     this.setMessage(mode === 'creative' ? 'Creative mode' : 'Survival mode');
@@ -289,7 +289,7 @@ export class VoxelEngine {
       this.mobs.push(m);
     }
     this.world.update(this.player.pos.x, this.player.pos.z, this.renderDistance);
-    for (let i = 0; i < 40; i++) this.world.updateMeshes(6);
+    for (let i = 0; i < 100; i++) this.world.updateMeshes(8);
     this.markDirty();
     this.setMessage('World loaded.');
   }
