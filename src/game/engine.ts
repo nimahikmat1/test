@@ -177,18 +177,36 @@ export class VoxelEngine {
     this.viewModelScene.add(vmDir);
     this.handGroup = new THREE.Group();
     this.viewModelScene.add(this.handGroup);
-    // arm (hand) — Minecraft-style arm, positioned at bottom-right
+    // arm (hand) — Minecraft-style arm with per-face shading (no texture, just colored faces)
     // Arm dimensions: 4x12x4 pixels = 0.25 x 0.75 x 0.25 blocks
     const armGroup = new THREE.Group();
+    // Build arm as a box with per-face materials for proper Minecraft-style shading
+    // Face order: +x, -x, +y(top), -y(bottom), +z, -z
+    const skinColor = 0xe8b890;
+    const armMats = [
+      new THREE.MeshLambertMaterial({ color: skinColor }), // +x (right side) - medium
+      new THREE.MeshLambertMaterial({ color: skinColor }), // -x (left side) - medium
+      new THREE.MeshLambertMaterial({ color: 0xf0c8a0 }),  // +y (top) - brightest
+      new THREE.MeshLambertMaterial({ color: 0xc89870 }),  // -y (bottom) - darkest
+      new THREE.MeshLambertMaterial({ color: 0xe0b088 }),  // +z (front) - medium-light
+      new THREE.MeshLambertMaterial({ color: 0xe0b088 }),  // -z (back) - medium-light
+    ];
     const armGeo = new THREE.BoxGeometry(0.2, 0.6, 0.2);
-    const armMat = new THREE.MeshLambertMaterial({ color: 0xe8b890 });
-    const armMesh = new THREE.Mesh(armGeo, armMat);
+    const armMesh = new THREE.Mesh(armGeo, armMats);
     armMesh.position.set(0, -0.3, 0); // pivot at top (shoulder)
     armGroup.add(armMesh);
-    // sleeve (shirt color)
+    // sleeve (shirt color) — also with per-face shading
+    const sleeveColor = 0x4a7ac0;
+    const sleeveMats = [
+      new THREE.MeshLambertMaterial({ color: sleeveColor }),
+      new THREE.MeshLambertMaterial({ color: sleeveColor }),
+      new THREE.MeshLambertMaterial({ color: 0x5a8ad0 }),
+      new THREE.MeshLambertMaterial({ color: 0x3a6ab0 }),
+      new THREE.MeshLambertMaterial({ color: 0x527ac6 }),
+      new THREE.MeshLambertMaterial({ color: 0x527ac6 }),
+    ];
     const sleeveGeo = new THREE.BoxGeometry(0.21, 0.24, 0.21);
-    const sleeveMat = new THREE.MeshLambertMaterial({ color: 0x4a7ac0 });
-    const sleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
+    const sleeve = new THREE.Mesh(sleeveGeo, sleeveMats);
     sleeve.position.set(0, -0.12, 0);
     armGroup.add(sleeve);
     // position arm at bottom-right, angled so it points forward and down

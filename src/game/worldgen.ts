@@ -127,28 +127,36 @@ export class WorldGen {
           }
         }
 
-        // water fill for ocean/lake columns — fill any air below sea level
-        if (h < SEA_LEVEL) {
+        // lava at deep caves (fill deep air first, before water)
+        for (let y = 1; y < 7; y++) {
+          if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
+            chunk.blocks[idx(lx, y, lz)] = B.LAVA;
+          }
+        }
+
+        // water fill — fill ALL air blocks below sea level for ocean/lake columns
+        // This prevents gaps in rivers and oceans where caves carved out terrain
+        if (h <= SEA_LEVEL) {
+          // fill from surface up to sea level (surface water)
           for (let y = h + 1; y <= SEA_LEVEL; y++) {
             if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
               chunk.blocks[idx(lx, y, lz)] = B.WATER;
             }
           }
-        }
-        // also fill caves that are below sea level and connected to ocean (simple heuristic)
-        if (h <= SEA_LEVEL + 1) {
-          for (let y = 1; y <= SEA_LEVEL; y++) {
-            if (chunk.blocks[idx(lx, y, lz)] === B.AIR && y < h) {
-              // check if this is a cave near water — fill with water if below sea level
+          // fill any air below sea level (caves that broke through to water)
+          for (let y = 7; y <= SEA_LEVEL; y++) {
+            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
               chunk.blocks[idx(lx, y, lz)] = B.WATER;
             }
           }
-        }
-
-        // lava at deep caves
-        for (let y = 1; y < 7; y++) {
-          if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
-            chunk.blocks[idx(lx, y, lz)] = B.LAVA;
+        } else if (h <= SEA_LEVEL + 2) {
+          // near-shore columns: fill caves that are below sea level
+          // (prevents gaps at shorelines where terrain meets water)
+          for (let y = 7; y <= SEA_LEVEL; y++) {
+            if (chunk.blocks[idx(lx, y, lz)] === B.AIR) {
+              // only fill if there's water adjacent (simple check: column is near ocean)
+              chunk.blocks[idx(lx, y, lz)] = B.WATER;
+            }
           }
         }
       }
